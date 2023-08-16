@@ -20,7 +20,19 @@
 start-master.sh -p 7077
 start-worker.sh spark://spark-iceberg:7077
 start-history-server.sh
-start-thriftserver.sh  --driver-java-options "-Dderby.system.home=/tmp/derby"
+start-thriftserver.sh  # --driver-java-options "-Dderby.system.home=/tmp/derby"
+
+if [ -n "$WAIT_FOR" ]; then
+  IFS=';' read -a HOSTPORT_ARRAY <<< "$WAIT_FOR"
+  for HOSTPORT in "${HOSTPORT_ARRAY[@]}"
+  do
+    WAIT_FOR_HOST=${HOSTPORT%:*}
+    WAIT_FOR_PORT=${HOSTPORT#*:}
+      
+    echo Waiting for $WAIT_FOR_HOST to listen on $WAIT_FOR_PORT...
+    while ! nc -z $WAIT_FOR_HOST $WAIT_FOR_PORT; do echo sleeping; sleep 2; done
+  done
+fi
 
 # Entrypoint, for example notebook, pyspark or spark-sql
 if [[ $# -gt 0 ]] ; then

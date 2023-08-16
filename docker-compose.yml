@@ -19,7 +19,7 @@ version: "3"
 
 services:
   spark-iceberg:
-    image: tabulario/spark-iceberg
+    image: psaini0803/spark-iceberg
     container_name: spark-iceberg
     build: spark/
     networks:
@@ -27,6 +27,7 @@ services:
     depends_on:
       - rest
       - minio
+      - metastore
     volumes:
       - ./warehouse:/home/iceberg/warehouse
       - ./notebooks:/home/iceberg/notebooks/notebooks
@@ -34,11 +35,14 @@ services:
       - AWS_ACCESS_KEY_ID=admin
       - AWS_SECRET_ACCESS_KEY=password
       - AWS_REGION=us-east-1
+      - WAIT_FOR=metastore:5432
     ports:
       - 8888:8888
       - 8080:8080
       - 10000:10000
       - 10001:10001
+      - 4040:4040
+      - 4041:4041
   rest:
     image: tabulario/iceberg-rest
     container_name: iceberg-rest
@@ -85,7 +89,25 @@ services:
       /usr/bin/mc rm -r --force minio/warehouse;
       /usr/bin/mc mb minio/warehouse;
       /usr/bin/mc policy set public minio/warehouse;
+      /usr/bin/mc rm -r --force minio/external;
+      /usr/bin/mc mb minio/external;
+      /usr/bin/mc policy set public minio/external;
       tail -f /dev/null
       "
+
+  metastore:
+    image: postgres:9.6.17-alpine
+    container_name: metastore
+    networks:
+      iceberg_net:
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./.metastore/:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=metastore
+      - POSTGRES_PASSWORD=metastore
+      - POSTGRES_DB=metastore
+
 networks:
   iceberg_net:

@@ -25,7 +25,9 @@ RUN apt-get update && \
       openjdk-11-jdk \
       build-essential \
       software-properties-common \
-      ssh && \
+      ssh \
+      netcat \
+      libpostgresql-jdbc-java && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -75,6 +77,9 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2
  && rm awscliv2.zip \
  && rm -rf aws/
 
+# Add postgresql jdbc driver
+RUN ln -s /usr/share/java/postgresql-jdbc4.jar ${SPARK_HOME}/jars/postgresql-jdbc4.jar
+
 # Add iceberg spark runtime jar to IJava classpath
 ENV IJAVA_CLASSPATH=/opt/spark/jars/*
 
@@ -116,6 +121,7 @@ COPY ipython/startup/00-prettytables.py /root/.ipython/profile_default/startup
 COPY ipython/startup/README /root/.ipython/profile_default/startup
 
 COPY spark-defaults.conf /opt/spark/conf
+COPY hive-site.xml /opt/spark/conf
 ENV PATH="/opt/spark/sbin:/opt/spark/bin:${PATH}"
 
 RUN chmod u+x /opt/spark/sbin/* && \
@@ -126,4 +132,4 @@ COPY .pyiceberg.yaml /root/.pyiceberg.yaml
 COPY entrypoint.sh .
 
 ENTRYPOINT ["./entrypoint.sh"]
-CMD ["notebook"]
+CMD ["sql-client.sh"]
